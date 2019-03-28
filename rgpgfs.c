@@ -34,6 +34,7 @@ static int rgpgfs_mkdirs(char *path) {
 }
 
 static int rgpgfs_encrypt(const char *source_path, char *cache_path) {
+  // fprintf(stderr, "rgpgfs_encrypt('%s', %p)\n", source_path, cache_path);
   size_t source_path_len = strnlen(source_path, FUSE_PATH_BUF_LEN);
   if (source_path_len >= FUSE_PATH_BUF_LEN) {
     errno = ENAMETOOLONG;
@@ -72,12 +73,17 @@ static int rgpgfs_encrypt(const char *source_path, char *cache_path) {
   return 0;
 }
 
-static int rgpgfs_getattr(const char *path, struct stat *statbuf,
+static int rgpgfs_getattr(const char *source_path, struct stat *statbuf,
                           struct fuse_file_info *fi) {
-  int res = lstat(path, statbuf);
-  // printf("rgpgfs_getattr(%s, ...) = %d\n", path, res);
-  if (res == -1)
+  if (lstat(source_path, statbuf))
     return -errno;
+  if (!S_ISDIR(statbuf->st_mode)) {
+    char cache_path[CACHE_PATH_BUF_LEN];
+    if (rgpgfs_encrypt(source_path, cache_path))
+      return -errno;
+    if (lstat(cache_path, statbuf))
+      return -errno;
+  }
   return 0;
 }
 
@@ -111,6 +117,7 @@ static int rgpgfs_readdir(const char *path, void *buf, fuse_fill_dir_t filler,
 }
 
 static int rgpgfs_open(const char *source_path, struct fuse_file_info *fi) {
+  // fprintf(stderr, "rgpgfs_open('%s', %p)", source_path, fi);
   char cache_path[CACHE_PATH_BUF_LEN];
   if (rgpgfs_encrypt(source_path, cache_path))
     return -errno;
