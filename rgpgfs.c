@@ -41,7 +41,7 @@ static int rgpgfs_encrypt(const char *source_path, char *cache_path) {
     return 1;
   }
   strcpy(cache_path, cache_dir);
-  strcpy(&cache_path[sizeof(cache_dir) - 1], source_path);
+  strcat(cache_path, source_path);
 
   if (rgpgfs_mkdirs(cache_path)) {
     perror("rgpgfs_encrypt: failed to create dirs");
