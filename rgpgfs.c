@@ -7,6 +7,7 @@
 #include <sys/stat.h>
 #include <unistd.h>
 
+// http://libfuse.github.io/doxygen/globals.html
 #define FUSE_USE_VERSION 31
 #include <fuse.h>
 
