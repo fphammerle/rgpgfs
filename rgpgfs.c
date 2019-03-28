@@ -84,6 +84,5 @@ static struct fuse_operations rgpgfs_fuse_operations = {
 };
 
 int main(int argc, char *argv[]) {
-  printf("libfuse version %s\n", fuse_pkgversion());
   return fuse_main(argc, argv, &rgpgfs_fuse_operations, NULL);
 }
