@@ -50,7 +50,8 @@ static int rgpgfs_encrypt(const char *source_path, char *cache_path) {
   }
 
   struct stat cache_stat;
-  if (lstat(cache_path, &cache_stat)) {
+  if (lstat(cache_path, &cache_stat) ||
+      source_stat.st_mtim.tv_sec > cache_stat.st_mtim.tv_sec) {
     if (rgpgfs_mkdirs(cache_path)) {
       perror("rgpgfs_encrypt: failed to create dirs");
       return 1;
@@ -63,6 +64,7 @@ static int rgpgfs_encrypt(const char *source_path, char *cache_path) {
     }
     fprintf(cache_file, "path: %s\n", source_path);
     fprintf(cache_file, "size: %lu bytes\n", source_stat.st_size);
+    fprintf(cache_file, "mod time: %ld\n", source_stat.st_mtim.tv_sec);
     fclose(cache_file);
     printf("encrypted %s\n", source_path);
   }
