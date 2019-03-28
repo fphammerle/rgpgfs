@@ -49,19 +49,23 @@ static int rgpgfs_encrypt(const char *source_path, char *cache_path) {
     return 1;
   }
 
-  if (rgpgfs_mkdirs(cache_path)) {
-    perror("rgpgfs_encrypt: failed to create dirs");
-    return 1;
-  }
+  struct stat cache_stat;
+  if (lstat(cache_path, &cache_stat)) {
+    if (rgpgfs_mkdirs(cache_path)) {
+      perror("rgpgfs_encrypt: failed to create dirs");
+      return 1;
+    }
 
-  FILE *cache_file = fopen(cache_path, "w");
-  if (cache_file == NULL) {
-    perror("rgpgfs_encrypt: failed to open cache file");
-    return 1;
+    FILE *cache_file = fopen(cache_path, "w");
+    if (cache_file == NULL) {
+      perror("rgpgfs_encrypt: failed to open cache file");
+      return 1;
+    }
+    fprintf(cache_file, "path: %s\n", source_path);
+    fprintf(cache_file, "size: %lu bytes\n", source_stat.st_size);
+    fclose(cache_file);
+    printf("encrypted %s\n", source_path);
   }
-  fprintf(cache_file, "path: %s\n", source_path);
-  fprintf(cache_file, "size: %lu bytes\n", source_stat.st_size);
-  fclose(cache_file);
 
   return 0;
 }
