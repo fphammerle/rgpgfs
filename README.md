@@ -73,16 +73,18 @@ host$ docker run --rm -it \
     -v /mnt/gpgfs:/enc:shared \
     --device /dev/fuse --cap-add SYS_ADMIN \
     fphammerle/rgpgfs ash
+container$ ls /plain
+example.txt
 container$ gpg --recv-keys 1234567890ABCDEF1234567890ABCDEF12345678
 container$ gpg --edit-key 1234567890ABCDEF1234567890ABCDEF12345678
 container gpg> trust
 container gpg> 5
 container gpg> quit
 container$ rgpgfs -o allow_other,modules=subdir,subdir=/plain,recipient=12345678 /enc
-container$ ls -1 /enc
+container$ ls /enc
 example.txt.gpg
 # meanwhile in another shell:
-host$ ls -1 /mnt/gpgfs
+host$ ls /mnt/gpgfs
 example.txt.gpg
 ```
 
