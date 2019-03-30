@@ -12,10 +12,14 @@
 // http://libfuse.github.io/doxygen/globals.html
 #define FUSE_USE_VERSION 31
 #include <fuse.h>
+// https://www.gnupg.org/documentation/manuals/gpgme/Function-and-Data-Index.html
+#include <gpgme.h>
 
 #define FUSE_PATH_BUF_LEN 256
 static char cache_dir[] = "/tmp/rgpgfs-cache-XXXXXX";
 static const size_t CACHE_PATH_BUF_LEN = sizeof(cache_dir) + FUSE_PATH_BUF_LEN;
+
+static gpgme_ctx_t gpgme_ctx;
 
 static int rgpgfs_mkdirs(char *path) {
   char *delimiter = strrchr(path, '/');
@@ -158,6 +162,14 @@ int main(int argc, char *argv[]) {
     return 1;
   }
   printf("cache: %s\n", cache_dir);
+  printf("gpgme version: %s\n", gpgme_check_version(NULL));
+  gpg_error_t gpgme_init_err = gpgme_new(&gpgme_ctx);
+  if (gpgme_init_err != GPG_ERR_NO_ERROR) {
+    fprintf(stderr, "Failed to initialize gpgme: %s (%d)\n",
+            gpg_strerror(gpgme_init_err), gpgme_init_err);
+    return 1;
+  }
+  gpgme_release(gpgme_ctx);
   // TODO rm -r cache_dir (see man nftw)
   return fuse_main(argc, argv, &rgpgfs_fuse_operations, NULL);
 }
