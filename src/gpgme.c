@@ -67,13 +67,18 @@ int rgpgfs_gpgme_encrypt_data_to_file(gpgme_ctx_t gpgme_ctx,
 
   // list of recipients may implicitly include the default recipient
   // (GPGME_ENCRYPT_NO_ENCRYPT_TO)
-  if (gpgme_op_encrypt(gpgme_ctx, recip_keys, 0, plain_data, cipher_data) !=
-      GPG_ERR_NO_ERROR) {
-    fprintf(stderr, "rgpgfs_gpgme_encrypt_data_to_file: failed to encrypt\n");
+  gpgme_error_t enc_err =
+      gpgme_op_encrypt(gpgme_ctx, recip_keys, 0, plain_data, cipher_data);
+  if (enc_err == GPG_ERR_UNUSABLE_PUBKEY) {
+    fprintf(stderr, "%s: some recipients are invalid\n", __func__);
+    result = 1;
+  } else if (enc_err != GPG_ERR_NO_ERROR) {
+    fprintf(stderr, "%s: failed to encrypt: %s (%d)\n", __func__,
+            gpg_strerror(enc_err), enc_err);
     result = 1;
   } else if (rgpgfs_gpgme_data_to_file(cipher_path, cipher_data)) {
-    fprintf(stderr, "rgpgfs_gpgme_encrypt_data_to_file: failed to write cipher "
-                    "data to disk\n");
+    fprintf(stderr, "%s: failed to write cipher data to disk: %s\n", __func__,
+            cipher_path);
     result = 1;
   }
 
