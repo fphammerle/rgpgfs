@@ -1,7 +1,10 @@
-#include <errno.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
+#include "src/fs.h"
+
+// http://libfuse.github.io/doxygen/globals.html
+#define FUSE_USE_VERSION 31
+#include <fuse.h>
+// https://www.gnupg.org/documentation/manuals/gpgme/Function-and-Data-Index.html
+#include <gpgme.h>
 
 // posix
 #include <dirent.h>
@@ -9,11 +12,10 @@
 #include <sys/types.h>
 #include <unistd.h>
 
-// http://libfuse.github.io/doxygen/globals.html
-#define FUSE_USE_VERSION 31
-#include <fuse.h>
-// https://www.gnupg.org/documentation/manuals/gpgme/Function-and-Data-Index.html
-#include <gpgme.h>
+#include <errno.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 
 #define FUSE_PATH_BUF_LEN 256
 static char cache_dir[] = "/tmp/rgpgfs-cache-XXXXXX";
@@ -23,22 +25,6 @@ static gpgme_ctx_t gpgme_ctx;
 static const char gpgme_recip_fpr[] =
     "1234567890ABCDEF1234567890ABCDEF12345678";
 static gpgme_key_t gpgme_recip_key;
-
-static int rgpgfs_mkdirs(char *path) {
-  char *delimiter = strrchr(path, '/');
-  if (delimiter == NULL) {
-    errno = ENOTSUP;
-    return 1;
-  }
-  *delimiter = '\0';
-  struct stat statbuf;
-  if (lstat(path, &statbuf) && (rgpgfs_mkdirs(path) || mkdir(path, S_IRWXU))) {
-    *delimiter = '/';
-    return 1;
-  }
-  *delimiter = '/';
-  return 0;
-}
 
 static int rgpgfs_gpgme_data_to_file(const char *path, gpgme_data_t data) {
   if (gpgme_data_seek(data, 0, SEEK_SET) != 0) {
@@ -90,7 +76,7 @@ static int rgpgfs_encrypt(const char *source_path, char *cache_path) {
   struct stat cache_stat;
   if (lstat(cache_path, &cache_stat) ||
       source_stat.st_mtim.tv_sec > cache_stat.st_mtim.tv_sec) {
-    if (rgpgfs_mkdirs(cache_path)) {
+    if (rgpgfs_fs_mkdirs(cache_path)) {
       perror("rgpgfs_encrypt: failed to create dirs");
       return 1;
     }
