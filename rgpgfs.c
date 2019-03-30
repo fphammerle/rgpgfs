@@ -159,8 +159,9 @@ static int rgpgfs_readdir(const char *path, void *buf, fuse_fill_dir_t filler,
                           off_t offset, struct fuse_file_info *fi,
                           enum fuse_readdir_flags flags) {
   DIR *dirp = opendir(path);
-  if (dirp == NULL)
+  if (dirp == NULL) {
     return -errno;
+  }
 
   struct dirent *entp;
   while ((entp = readdir(dirp)) != NULL) {
@@ -194,8 +195,9 @@ static int rgpgfs_read(const char *path, char *buf, size_t count, off_t offset,
     return ENOTSUP;
   }
   ssize_t bytes_num = pread(fi->fh, buf, count, offset);
-  if (bytes_num == -1)
+  if (bytes_num == -1) {
     return -errno;
+  }
   return bytes_num;
 }
 
