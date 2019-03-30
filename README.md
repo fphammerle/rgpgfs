@@ -21,12 +21,8 @@ make
 ### Docker 🐳
 
 ```sh
-docker build -t rgpgfs .
-docker run --rm -it --device /dev/fuse \
-    --cap-add SYS_ADMIN rgpgfs
+docker build --target build -t rgpgfs .
 ```
-
-You may need to add `--security-opt apparmor:unconfined`.
 
 ## Usage
 
@@ -65,3 +61,34 @@ gpg: encrypted with 4096-bit RSA key, ID 89ABCDEF12345678, created 2019-03-30
 ```sh
 rgpgfs -o modules=subdir -o subdir=/source/dir /mount/point
 ```
+
+### Docker 🐳
+
+Mount an enciphered view of named volume `plain-data` at `/mnt/gpgfs`.
+
+```sh
+host$ mkdir /mnt/gpgfs && chmod a+rwx /mnt/gpgfs
+host$ docker run --rm -it \
+    -v plain-data:/plain:ro \
+    -v /mnt/gpgfs:/enc:shared \
+    --device /dev/fuse --cap-add SYS_ADMIN \
+    fphammerle/rgpgfs ash
+container$ gpg --recv-keys 1234567890ABCDEF1234567890ABCDEF12345678
+container$ gpg --edit-key 1234567890ABCDEF1234567890ABCDEF12345678
+container gpg> trust
+container gpg> 5
+container gpg> quit
+container$ rgpgfs -o allow_other,modules=subdir,subdir=/plain,recipient=12345678 /enc
+container$ ls -1 /enc
+example.txt.gpg
+# meanwhile in another shell:
+host$ ls -1 /mnt/gpgfs
+example.txt.gpg
+```
+
+When AppArmor is enabled
+you may need to add `--security-opt apparmor:unconfined`.
+
+You may need to disable user namespace remapping for containers
+(dockerd option `--userns-remap`)
+due to https://github.com/moby/moby/issues/36472 .

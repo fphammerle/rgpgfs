@@ -22,6 +22,8 @@ RUN apk add --no-cache \
     fuse3 \
     gpgme
 
+RUN echo user_allow_other >> /etc/fuse.conf
+
 # optional, contains fusermount
 RUN apk add --no-cache fuse
 
