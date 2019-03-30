@@ -53,7 +53,7 @@ static int rgpgfs_encrypt(const char *source_path, char *cache_path) {
 
   struct stat source_stat;
   if (lstat(source_path, &source_stat)) {
-    perror("rgpgfs_encrypt: could not stat source file");
+    perror("rgpgfs_encrypt: failed to stat source file");
     return 1;
   }
 
@@ -194,7 +194,7 @@ int main(int argc, char *argv[]) {
             gpgme_recip_key->fpr);
     return 1;
   }
-  printf("key fingerprint: %s\n", gpgme_recip_key->fpr);
+  printf("recipient: %s\n", gpgme_recip_key->fpr);
   // TODO rm -r cache_dir (see man nftw)
   int fuse_main_err = fuse_main(argc, argv, &rgpgfs_fuse_operations, NULL);
   gpgme_release(gpgme_ctx);
