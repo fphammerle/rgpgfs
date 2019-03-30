@@ -194,7 +194,12 @@ int main(int argc, char *argv[]) {
             gpgme_recip_key->fpr);
     return 1;
   }
-  printf("recipient: %s\n", gpgme_recip_key->fpr);
+  gpgme_user_id_t gpgme_recip_id = gpgme_recip_key->uids;
+  while(gpgme_recip_id != NULL) {
+      printf("recipient: %s\n", gpgme_recip_id->uid);
+      gpgme_recip_id = gpgme_recip_id->next;
+  }
+  printf("recipient fingerprint: %s\n", gpgme_recip_key->fpr);
   // TODO rm -r cache_dir (see man nftw)
   int fuse_main_err = fuse_main(argc, argv, &rgpgfs_fuse_operations, NULL);
   gpgme_release(gpgme_ctx);
