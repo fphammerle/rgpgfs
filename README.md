@@ -1,11 +1,17 @@
-# Build
+# rgpgfs
+
+PoC: PGP/GPG-enciphered view of plain directories
+
+Mounting & unmounting does *not* require setuid, sudo, root ...
+
+## Build
 
 ```sh
 apt-get install libfuse3-dev libgpgme-dev
 make
 ```
 
-# Usage
+## Usage
 
 ```sh
 rgpgfs -r [fingerprint] [mountpoint]
@@ -15,7 +21,7 @@ rgpgfs --recipient=[fingerprint] [mountpoint]
 rgpgfs -o recipient=[fingerprint] [mountpoint]
 ```
 
-## Example
+### Example
 
 Mount encrypted view of `/` in `~/rgpgfs`:
 
@@ -34,7 +40,7 @@ gpg: encrypted with 4096-bit RSA key, ID 89ABCDEF12345678, created 2019-03-30
 3141
 ```
 
-## Change source directory
+### Change source directory
 
 ```sh
 rgpgfs -o modules=subdir -o subdir=/source/dir /mount/point
