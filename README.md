@@ -1,3 +1,12 @@
+# Build
+
+```sh
+apt-get install libfuse3-dev libgpgme-dev
+make
+```
+
+# Usage
+
 ## Change source directory
 
 ```sh
