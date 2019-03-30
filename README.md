@@ -11,10 +11,22 @@ Run `make` after installing
 and
 [gpgme](https://www.gnupg.org/software/gpgme/index.html).
 
+### Debian / Ubuntu
+
 ```sh
 apt-get install libfuse3-dev libgpgme-dev
 make
 ```
+
+### Docker 🐳
+
+```sh
+docker build -t rgpgfs .
+docker run --rm -it --device /dev/fuse \
+    --cap-add SYS_ADMIN rgpgfs
+```
+
+You may need to add `--security-opt apparmor:unconfined`.
 
 ## Usage
 
