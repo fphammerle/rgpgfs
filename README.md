@@ -1,4 +1,4 @@
-# rgpgfs
+# rgpgfs 💾 🔐
 
 PoC: PGP/GPG-enciphered view of plain directories
 
