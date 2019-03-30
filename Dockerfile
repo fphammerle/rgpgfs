@@ -13,6 +13,7 @@ USER build
 
 COPY --chown=build:nogroup . /rgpgfs
 WORKDIR /rgpgfs
+RUN ls -lah
 RUN make
 
 
