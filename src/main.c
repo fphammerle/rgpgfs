@@ -52,31 +52,15 @@ static int rgpgfs_encrypt(const char *source_path, char *cache_path) {
       return 1;
     }
 
-    gpgme_data_t plain_data;
-    gpgme_error_t gpgme_source_read_err =
-        gpgme_data_new_from_file(&plain_data, source_path, 1);
-    if (gpgme_source_read_err != GPG_ERR_NO_ERROR) {
-      fprintf(stderr,
-              "rgpgfs_encrypt: failed to read source file %s: %s (%d)\n",
-              source_path, gpg_strerror(gpgme_source_read_err),
-              gpgme_source_read_err);
+    // list of recipients may implicitly include the default recipient
+    gpgme_key_t recip_keys[] = {gpgme_recip_key, NULL};
+    if (rgpgfs_gpgme_encrypt_file_to_file(gpgme_ctx, recip_keys, source_path,
+                                          cache_path)) {
+      fprintf(stderr, "%s: failed to create encrypted cache of %s\n", __func__,
+              source_path);
       return 1;
     }
-    // list of recipients may implicitly include the default recipient
-    // (GPGME_ENCRYPT_NO_ENCRYPT_TO)
-    gpgme_key_t recip_keys[] = {gpgme_recip_key, NULL};
-    int result = 0;
-    if (rgpgfs_gpgme_encrypt_data_to_file(gpgme_ctx, recip_keys, plain_data,
-                                          cache_path)) {
-      fprintf(stderr,
-              "rgpgfs_encrypt: failed to create encrypted cache of %s\n",
-              source_path);
-      result = 1;
-    } else {
-      printf("encrypted %s\n", source_path);
-    }
-    gpgme_data_release(plain_data);
-    return result;
+    printf("encrypted %s\n", source_path);
   }
 
   return 0;

@@ -47,6 +47,8 @@ int rgpgfs_gpgme_encrypt_data_to_file(gpgme_ctx_t gpgme_ctx,
 
   int result = 0;
 
+  // list of recipients may implicitly include the default recipient
+  // (GPGME_ENCRYPT_NO_ENCRYPT_TO)
   if (gpgme_op_encrypt(gpgme_ctx, recip_keys, 0, plain_data, cipher_data) !=
       GPG_ERR_NO_ERROR) {
     fprintf(stderr, "rgpgfs_gpgme_encrypt_data_to_file: failed to encrypt\n");
@@ -58,5 +60,23 @@ int rgpgfs_gpgme_encrypt_data_to_file(gpgme_ctx_t gpgme_ctx,
   }
 
   gpgme_data_release(cipher_data);
+  return result;
+}
+
+int rgpgfs_gpgme_encrypt_file_to_file(gpgme_ctx_t gpgme_ctx,
+                                      gpgme_key_t recip_keys[],
+                                      const char *plain_path,
+                                      const char *cipher_path) {
+  gpgme_data_t plain_data;
+  gpgme_error_t gpgme_read_err =
+      gpgme_data_new_from_file(&plain_data, plain_path, 1);
+  if (gpgme_read_err != GPG_ERR_NO_ERROR) {
+    fprintf(stderr, "%s: failed to read file %s: %s (%d)\n", __func__,
+            plain_path, gpg_strerror(gpgme_read_err), gpgme_read_err);
+    return 1;
+  }
+  int result = rgpgfs_gpgme_encrypt_data_to_file(gpgme_ctx, recip_keys,
+                                                 plain_data, cipher_path);
+  gpgme_data_release(plain_data);
   return result;
 }
