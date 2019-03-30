@@ -40,6 +40,36 @@ static int rgpgfs_mkdirs(char *path) {
   return 0;
 }
 
+static int rgpgfs_gpgme_data_to_file(const char *path, gpgme_data_t data) {
+  if (gpgme_data_seek(data, 0, SEEK_SET) != 0) {
+    perror("rgpgfs_gpgme_data_to_file: failed to seek");
+    return 1;
+  }
+
+  FILE *file = fopen(path, "wb");
+  if (file == NULL) {
+    perror("rgpgfs_gpgme_data_to_file: failed to open file");
+    return 1;
+  }
+
+  ssize_t count;
+  char buf[BUFSIZ];
+  while ((count = gpgme_data_read(data, buf, BUFSIZ)) > 0) {
+    if (fwrite(buf, 1, count, file) != count) {
+      fprintf(stderr,
+              "rgpgfs_gpgme_data_to_file: failed to write data to file");
+      return 1;
+    }
+  }
+  if (count != 0) {
+    perror("rgpgfs_gpgme_data_to_file: failed to load data into buffer");
+    return 1;
+  }
+
+  fclose(file);
+  return 0;
+}
+
 static int rgpgfs_encrypt(const char *source_path, char *cache_path) {
   // fprintf(stderr, "rgpgfs_encrypt('%s', %p)\n", source_path, cache_path);
   size_t source_path_len = strnlen(source_path, FUSE_PATH_BUF_LEN);
@@ -65,16 +95,39 @@ static int rgpgfs_encrypt(const char *source_path, char *cache_path) {
       return 1;
     }
 
-    FILE *cache_file = fopen(cache_path, "w");
-    if (cache_file == NULL) {
-      perror("rgpgfs_encrypt: failed to open cache file");
+    gpgme_data_t plain_data;
+    gpgme_error_t gpgme_source_read_err =
+        gpgme_data_new_from_file(&plain_data, source_path, 1);
+    if (gpgme_source_read_err != GPG_ERR_NO_ERROR) {
+      fprintf(stderr,
+              "rgpgfs_encrypt: failed to read source file %s: %s (%d)\n",
+              source_path, gpg_strerror(gpgme_source_read_err),
+              gpgme_source_read_err);
       return 1;
     }
-    fprintf(cache_file, "path: %s\n", source_path);
-    fprintf(cache_file, "size: %lu bytes\n", source_stat.st_size);
-    fprintf(cache_file, "mod time: %ld\n", source_stat.st_mtim.tv_sec);
-    fclose(cache_file);
-    printf("encrypted %s\n", source_path);
+    gpgme_data_t cipher_data;
+    if (gpgme_data_new(&cipher_data) != GPG_ERR_NO_ERROR) {
+      fprintf(stderr,
+              "rgpgfs_encrypt: failed to prepare cipher data container\n");
+      gpgme_data_release(plain_data);
+      return 1;
+    }
+    // list of recipients may implicitly include the default recipient
+    // (GPGME_ENCRYPT_NO_ENCRYPT_TO)
+    gpgme_key_t recip_keys[] = {gpgme_recip_key, NULL};
+    if (gpgme_op_encrypt(gpgme_ctx, recip_keys, 0, plain_data, cipher_data) ==
+        GPG_ERR_NO_ERROR) {
+      if (rgpgfs_gpgme_data_to_file(cache_path, cipher_data)) {
+        fprintf(stderr,
+                "rgpgfs_encrypt: failed to write cipher data to disk\n");
+      } else {
+        printf("encrypted %s\n", source_path);
+      }
+    } else {
+      fprintf(stderr, "rgpgfs_encrypt: failed to encrypt %s\n", source_path);
+    }
+    gpgme_data_release(cipher_data);
+    gpgme_data_release(plain_data);
   }
 
   return 0;
@@ -195,9 +248,9 @@ int main(int argc, char *argv[]) {
     return 1;
   }
   gpgme_user_id_t gpgme_recip_id = gpgme_recip_key->uids;
-  while(gpgme_recip_id != NULL) {
-      printf("recipient: %s\n", gpgme_recip_id->uid);
-      gpgme_recip_id = gpgme_recip_id->next;
+  while (gpgme_recip_id != NULL) {
+    printf("recipient: %s\n", gpgme_recip_id->uid);
+    gpgme_recip_id = gpgme_recip_id->next;
   }
   printf("recipient fingerprint: %s\n", gpgme_recip_key->fpr);
   // TODO rm -r cache_dir (see man nftw)
