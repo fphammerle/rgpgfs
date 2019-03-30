@@ -15,7 +15,10 @@ default : rgpgfs
 src/fs.o : src/fs.c src/fs.h
 	$(CC) $(CFLAGS) -c $< -o $@
 
-src/main.o : src/main.c src/fs.h
+src/gpgme.o : src/gpgme.c src/gpgme.h
+	$(CC) $(CFLAGS) -c $< -o $@
+
+src/main.o : src/main.c src/fs.h src/gpgme.h
 	$(CC) $(CFLAGS) -c $< -o $@
 
 rgpgfs : src/*.o
