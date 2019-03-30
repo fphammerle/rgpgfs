@@ -21,7 +21,7 @@ src/gpgme.o : src/gpgme.c src/gpgme.h
 src/main.o : src/main.c src/fs.h src/gpgme.h src/str.h
 	$(CC) $(CFLAGS) -c $< -o $@
 
-src/str.o : src/str.c
+src/str.o : src/str.c src/str.h
 	$(CC) $(CFLAGS) -c $< -o $@
 
 rgpgfs : src/fs.o src/gpgme.o src/main.o src/str.o
