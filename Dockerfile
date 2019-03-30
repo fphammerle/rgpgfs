@@ -31,3 +31,5 @@ RUN adduser -S encrypt
 USER encrypt
 
 COPY --from=build /rgpgfs/rgpgfs /usr/local/bin/
+
+COPY --chown=encrypt:nogroup docker/ash_history /home/encrypt/.ash_history

@@ -1,0 +1,3 @@
+gpg --list-public-keys
+gpg --recv-keys 
+rgpgfs -o allow_other,modules=subdir,subdir=/plain,recipient= /enc
