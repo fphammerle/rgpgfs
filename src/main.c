@@ -23,9 +23,15 @@ static char cache_dir[] = "/tmp/rgpgfs-cache-XXXXXX";
 static const size_t CACHE_PATH_BUF_LEN = sizeof(cache_dir) + FUSE_PATH_BUF_LEN;
 
 static gpgme_ctx_t gpgme_ctx;
-static const char gpgme_recip_fpr[] =
-    "1234567890ABCDEF1234567890ABCDEF12345678";
 static gpgme_key_t gpgme_recip_key;
+
+static struct { char *recipient_name; } rgpgfs_config;
+
+static struct fuse_opt rgpgfs_opts[] = {{"--recipient %s", 0, 0},
+                                        {"--recipient=%s", 0, 0},
+                                        {"-r %s", 0, 0},
+                                        {"recipient=%s", 0, 0},
+                                        FUSE_OPT_END};
 
 static int rgpgfs_encrypt(const char *source_path, char *cache_path) {
   // fprintf(stderr, "rgpgfs_encrypt('%s', %p)\n", source_path, cache_path);
@@ -149,10 +155,9 @@ static struct fuse_operations rgpgfs_fuse_operations = {
 };
 
 int main(int argc, char *argv[]) {
-  if (mkdtemp(cache_dir) == NULL) {
-    return 1;
-  }
-  printf("cache: %s\n", cache_dir);
+  struct fuse_args args = FUSE_ARGS_INIT(argc, argv);
+  rgpgfs_config.recipient_name = NULL;
+  fuse_opt_parse(&args, &rgpgfs_config, rgpgfs_opts, NULL);
   printf("gpgme version: %s\n", gpgme_check_version(NULL));
   gpg_error_t gpgme_init_err = gpgme_new(&gpgme_ctx);
   if (gpgme_init_err != GPG_ERR_NO_ERROR) {
@@ -160,26 +165,14 @@ int main(int argc, char *argv[]) {
             gpg_strerror(gpgme_init_err), gpgme_init_err);
     return 1;
   }
-  gpg_error_t gpgme_get_key_err =
-      gpgme_get_key(gpgme_ctx, gpgme_recip_fpr, &gpgme_recip_key, 0);
-  switch (gpgme_get_key_err) {
-  case GPG_ERR_NO_ERROR:
-    break;
-  case GPG_ERR_EOF:
-    fprintf(stderr, "Could not find key %s\n", gpgme_recip_fpr);
-    return 1;
-  case GPG_ERR_AMBIGUOUS_NAME:
-    fprintf(stderr, "Key name '%s' is ambiguous\n", gpgme_recip_fpr);
-    return 1;
-  case GPG_ERR_INV_VALUE:
-  default:
-    fprintf(stderr, "Failed to load key %s: %s (%d)\n", gpgme_recip_fpr,
-            gpg_strerror(gpgme_init_err), gpgme_get_key_err);
+  if (rgpgfs_config.recipient_name == NULL) {
+    fprintf(stderr, "Missing parameter --recipient\n");
     return 1;
   }
-  if (!gpgme_recip_key->can_encrypt) {
-    fprintf(stderr, "Selected key %s can not be used for encryption\n",
-            gpgme_recip_key->fpr);
+  printf("recipient name: %s\n", rgpgfs_config.recipient_name);
+  if (rgpgfs_gpgme_get_encrypt_key(gpgme_ctx, rgpgfs_config.recipient_name,
+                                   &gpgme_recip_key)) {
+    gpgme_release(gpgme_ctx);
     return 1;
   }
   gpgme_user_id_t gpgme_recip_id = gpgme_recip_key->uids;
@@ -188,8 +181,13 @@ int main(int argc, char *argv[]) {
     gpgme_recip_id = gpgme_recip_id->next;
   }
   printf("recipient fingerprint: %s\n", gpgme_recip_key->fpr);
+  if (mkdtemp(cache_dir) == NULL) {
+    return 1;
+  }
+  printf("cache: %s\n", cache_dir);
+  int fuse_main_err =
+      fuse_main(args.argc, args.argv, &rgpgfs_fuse_operations, NULL);
   // TODO rm -r cache_dir (see man nftw)
-  int fuse_main_err = fuse_main(argc, argv, &rgpgfs_fuse_operations, NULL);
   gpgme_release(gpgme_ctx);
   return fuse_main_err;
 }

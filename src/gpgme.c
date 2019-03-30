@@ -4,6 +4,22 @@
 
 #include <stdio.h>
 
+int rgpgfs_gpgme_get_encrypt_key(gpgme_ctx_t gpgme_ctx, const char *key_name,
+                                 gpgme_key_t *key) {
+  gpg_error_t err = gpgme_get_key(gpgme_ctx, key_name, key, 0);
+  if (err != GPG_ERR_NO_ERROR) {
+    fprintf(stderr, "Failed to load key %s: %s (%d)\n", key_name,
+            gpg_strerror(err), err);
+    return 1;
+  }
+  if (!(*key)->can_encrypt) {
+    fprintf(stderr, "Selected key %s can not be used for encryption\n",
+            (*key)->fpr);
+    return 1;
+  }
+  return 0;
+}
+
 int rgpgfs_gpgme_data_to_file(const char *path, gpgme_data_t data) {
   if (gpgme_data_seek(data, 0, SEEK_SET) != 0) {
     perror("rgpgfs_gpgme_data_to_file: failed to seek");
