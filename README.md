@@ -38,6 +38,9 @@ rgpgfs --recipient=[fingerprint] [mountpoint]
 rgpgfs -o recipient=[fingerprint] [mountpoint]
 ```
 
+*rgpgfs* will refuse to encrypt with untrusted keys.
+See `gpg -k [fingerprint]`.
+
 ### Example
 
 Mount encrypted view of `/` in `~/rgpgfs`:
