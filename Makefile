@@ -18,10 +18,13 @@ src/fs.o : src/fs.c src/fs.h
 src/gpgme.o : src/gpgme.c src/gpgme.h
 	$(CC) $(CFLAGS) -c $< -o $@
 
-src/main.o : src/main.c src/fs.h src/gpgme.h
+src/main.o : src/main.c src/fs.h src/gpgme.h src/str.h
 	$(CC) $(CFLAGS) -c $< -o $@
 
-rgpgfs : src/fs.o src/gpgme.o src/main.o
+src/str.o : src/str.c
+	$(CC) $(CFLAGS) -c $< -o $@
+
+rgpgfs : src/fs.o src/gpgme.o src/main.o src/str.o
 	$(LD) $^ -o $@ $(LIBS)
 
 format : src/*.h src/*.c

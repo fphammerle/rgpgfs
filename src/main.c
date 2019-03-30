@@ -1,5 +1,6 @@
 #include "src/fs.h"
 #include "src/gpgme.h"
+#include "src/str.h"
 
 // http://libfuse.github.io/doxygen/globals.html
 #define FUSE_USE_VERSION 31
@@ -21,6 +22,8 @@
 #define FUSE_PATH_BUF_LEN 256
 static char cache_dir[] = "/tmp/rgpgfs-cache-XXXXXX";
 static const size_t CACHE_PATH_BUF_LEN = sizeof(cache_dir) + FUSE_PATH_BUF_LEN;
+
+static const char ENC_SUFFIX[] = ".gpg";
 
 static gpgme_ctx_t gpgme_ctx;
 static gpgme_key_t gpgme_recip_key;
@@ -72,25 +75,54 @@ static int rgpgfs_encrypt(const char *source_path, char *cache_path) {
   return 0;
 }
 
-static int rgpgfs_getattr(const char *source_path, struct stat *statbuf,
+static int rgpgfs_getattr(const char *mount_path, struct stat *statbuf,
                           struct fuse_file_info *fi) {
-  if (lstat(source_path, statbuf))
-    return -errno;
-  if (!S_ISDIR(statbuf->st_mode)) {
-    char cache_path[CACHE_PATH_BUF_LEN];
-    if (rgpgfs_encrypt(source_path, cache_path))
-      return -errno;
-    if (lstat(cache_path, statbuf))
-      return -errno;
+  if (!lstat(mount_path, statbuf)) {
+    if (S_ISREG(statbuf->st_mode)) {
+      fprintf(stderr, "%s: tried to access path without %s suffix: %s\n",
+              __func__, ENC_SUFFIX, mount_path);
+      return -ENOENT; // missing ENC_SUFFIX
+    }
+    return 0;
   }
+
+  char source_path[FUSE_PATH_BUF_LEN];
+  if (rgpgfs_strncpy_without_suffix(source_path, mount_path, ENC_SUFFIX,
+                                    FUSE_PATH_BUF_LEN - 1)) {
+    return -ENOENT;
+  }
+
+  char cache_path[CACHE_PATH_BUF_LEN];
+  if (rgpgfs_encrypt(source_path, cache_path))
+    return -errno;
+  if (lstat(cache_path, statbuf))
+    return -errno;
   return 0;
 }
 
-static int rgpgfs_access(const char *path, int mask) {
-  int res = access(path, mask);
-  // printf("rgpgfs_access(%s, %d) = %d\n", path, mask, res);
-  if (res == -1)
+static int rgpgfs_access(const char *mount_path, int mask) {
+  struct stat statbuf;
+  if (!lstat(mount_path, &statbuf)) {
+    if (S_ISREG(statbuf.st_mode)) {
+      fprintf(stderr, "%s: tried to access path without %s suffix: %s\n",
+              __func__, ENC_SUFFIX, mount_path);
+      return -ENOENT;
+    }
+    if (access(mount_path, mask)) {
+      return -errno;
+    }
+    return 0;
+  }
+
+  char source_path[FUSE_PATH_BUF_LEN];
+  if (rgpgfs_strncpy_without_suffix(source_path, mount_path, ENC_SUFFIX,
+                                    FUSE_PATH_BUF_LEN - 1)) {
+    fprintf(stderr, "%s: invalid suffix in path: %s\n", __func__, mount_path);
+    return -ENOENT;
+  }
+  if (access(source_path, mask)) {
     return -errno;
+  }
   return 0;
 }
 
@@ -102,22 +134,41 @@ static int rgpgfs_readdir(const char *path, void *buf, fuse_fill_dir_t filler,
     return -errno;
   }
 
+  errno = 0;
+
   struct dirent *entp;
+  const size_t dirent_name_max_len = sizeof(entp->d_name);
   while ((entp = readdir(dirp)) != NULL) {
     struct stat statbf;
     memset(&statbf, 0, sizeof(statbf));
     statbf.st_ino = entp->d_ino;
     statbf.st_mode = entp->d_type << 12;
-    if (filler(buf, entp->d_name, &statbf, 0, 0))
+    if (S_ISREG(statbf.st_mode)) {
+      if (strnlen(entp->d_name, dirent_name_max_len) + strlen(ENC_SUFFIX) >=
+          dirent_name_max_len) {
+        errno = ENAMETOOLONG;
+        break;
+      }
+      strcat(entp->d_name, ENC_SUFFIX);
+    }
+    if (filler(buf, entp->d_name, &statbf, 0, 0)) {
+      errno = ENOBUFS;
       break;
+    }
   }
 
   closedir(dirp);
-  return 0;
+  return -errno;
 }
 
-static int rgpgfs_open(const char *source_path, struct fuse_file_info *fi) {
-  // fprintf(stderr, "rgpgfs_open('%s', %p)", source_path, fi);
+static int rgpgfs_open(const char *mount_path, struct fuse_file_info *fi) {
+  char source_path[FUSE_PATH_BUF_LEN];
+  if (rgpgfs_strncpy_without_suffix(source_path, mount_path, ENC_SUFFIX,
+                                    FUSE_PATH_BUF_LEN - 1)) {
+    fprintf(stderr, "%s: invalid suffix in path: %s\n", __func__, mount_path);
+    return -ENOENT;
+  }
+
   char cache_path[CACHE_PATH_BUF_LEN];
   if (rgpgfs_encrypt(source_path, cache_path))
     return -errno;
