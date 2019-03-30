@@ -20,6 +20,22 @@ int rgpgfs_gpgme_get_encrypt_key(gpgme_ctx_t gpgme_ctx, const char *key_name,
   return 0;
 }
 
+static int _rgpgfs_gpgme_write_data_to_file(FILE *file, gpgme_data_t data) {
+  ssize_t count;
+  char buf[BUFSIZ];
+  while ((count = gpgme_data_read(data, buf, BUFSIZ)) > 0) {
+    if (fwrite(buf, 1, count, file) != count) {
+      fprintf(stderr, "%s: failed to write data to file", __func__);
+      return 1;
+    }
+  }
+  if (count != 0) {
+    perror("_rgpgfs_gpgme_write_data_to_file: failed to load data into buffer");
+    return 1;
+  }
+  return 0;
+}
+
 int rgpgfs_gpgme_data_to_file(const char *path, gpgme_data_t data) {
   if (gpgme_data_seek(data, 0, SEEK_SET) != 0) {
     perror("rgpgfs_gpgme_data_to_file: failed to seek");
@@ -31,23 +47,9 @@ int rgpgfs_gpgme_data_to_file(const char *path, gpgme_data_t data) {
     perror("rgpgfs_gpgme_data_to_file: failed to open file");
     return 1;
   }
-
-  ssize_t count;
-  char buf[BUFSIZ];
-  while ((count = gpgme_data_read(data, buf, BUFSIZ)) > 0) {
-    if (fwrite(buf, 1, count, file) != count) {
-      fprintf(stderr,
-              "rgpgfs_gpgme_data_to_file: failed to write data to file");
-      return 1;
-    }
-  }
-  if (count != 0) {
-    perror("rgpgfs_gpgme_data_to_file: failed to load data into buffer");
-    return 1;
-  }
-
+  int res = _rgpgfs_gpgme_write_data_to_file(file, data);
   fclose(file);
-  return 0;
+  return res;
 }
 
 int rgpgfs_gpgme_encrypt_data_to_file(gpgme_ctx_t gpgme_ctx,
