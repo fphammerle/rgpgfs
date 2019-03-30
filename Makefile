@@ -24,5 +24,5 @@ src/main.o : src/main.c src/fs.h src/gpgme.h
 rgpgfs : src/*.o
 	$(LD) $^ -o $@ $(LIBS)
 
-format : src/*.c
+format : src/*.h src/*.c
 	clang-format -i -verbose $^

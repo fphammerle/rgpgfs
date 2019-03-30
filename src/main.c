@@ -62,29 +62,21 @@ static int rgpgfs_encrypt(const char *source_path, char *cache_path) {
               gpgme_source_read_err);
       return 1;
     }
-    gpgme_data_t cipher_data;
-    if (gpgme_data_new(&cipher_data) != GPG_ERR_NO_ERROR) {
-      fprintf(stderr,
-              "rgpgfs_encrypt: failed to prepare cipher data container\n");
-      gpgme_data_release(plain_data);
-      return 1;
-    }
     // list of recipients may implicitly include the default recipient
     // (GPGME_ENCRYPT_NO_ENCRYPT_TO)
     gpgme_key_t recip_keys[] = {gpgme_recip_key, NULL};
-    if (gpgme_op_encrypt(gpgme_ctx, recip_keys, 0, plain_data, cipher_data) ==
-        GPG_ERR_NO_ERROR) {
-      if (rgpgfs_gpgme_data_to_file(cache_path, cipher_data)) {
-        fprintf(stderr,
-                "rgpgfs_encrypt: failed to write cipher data to disk\n");
-      } else {
-        printf("encrypted %s\n", source_path);
-      }
+    int result = 0;
+    if (rgpgfs_gpgme_encrypt_data_to_file(gpgme_ctx, recip_keys, plain_data,
+                                          cache_path)) {
+      fprintf(stderr,
+              "rgpgfs_encrypt: failed to create encrypted cache of %s\n",
+              source_path);
+      result = 1;
     } else {
-      fprintf(stderr, "rgpgfs_encrypt: failed to encrypt %s\n", source_path);
+      printf("encrypted %s\n", source_path);
     }
-    gpgme_data_release(cipher_data);
     gpgme_data_release(plain_data);
+    return result;
   }
 
   return 0;
