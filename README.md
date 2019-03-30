@@ -6,6 +6,11 @@ Mounting & unmounting does *not* require setuid, sudo, root ...
 
 ## Build
 
+Run `make` after installing
+[libfuse](https://github.com/libfuse/libfuse)
+and
+[gpgme](https://www.gnupg.org/software/gpgme/index.html).
+
 ```sh
 apt-get install libfuse3-dev libgpgme-dev
 make
