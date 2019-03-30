@@ -20,6 +20,9 @@ static char cache_dir[] = "/tmp/rgpgfs-cache-XXXXXX";
 static const size_t CACHE_PATH_BUF_LEN = sizeof(cache_dir) + FUSE_PATH_BUF_LEN;
 
 static gpgme_ctx_t gpgme_ctx;
+static const char gpgme_recip_fpr[] =
+    "1234567890ABCDEF1234567890ABCDEF12345678";
+static gpgme_key_t gpgme_recip_key;
 
 static int rgpgfs_mkdirs(char *path) {
   char *delimiter = strrchr(path, '/');
@@ -169,7 +172,31 @@ int main(int argc, char *argv[]) {
             gpg_strerror(gpgme_init_err), gpgme_init_err);
     return 1;
   }
-  gpgme_release(gpgme_ctx);
+  gpg_error_t gpgme_get_key_err =
+      gpgme_get_key(gpgme_ctx, gpgme_recip_fpr, &gpgme_recip_key, 0);
+  switch (gpgme_get_key_err) {
+  case GPG_ERR_NO_ERROR:
+    break;
+  case GPG_ERR_EOF:
+    fprintf(stderr, "Could not find key %s\n", gpgme_recip_fpr);
+    return 1;
+  case GPG_ERR_AMBIGUOUS_NAME:
+    fprintf(stderr, "Key name '%s' is ambiguous\n", gpgme_recip_fpr);
+    return 1;
+  case GPG_ERR_INV_VALUE:
+  default:
+    fprintf(stderr, "Failed to load key %s: %s (%d)\n", gpgme_recip_fpr,
+            gpg_strerror(gpgme_init_err), gpgme_get_key_err);
+    return 1;
+  }
+  if (!gpgme_recip_key->can_encrypt) {
+    fprintf(stderr, "Selected key %s can not be used for encryption\n",
+            gpgme_recip_key->fpr);
+    return 1;
+  }
+  printf("key fingerprint: %s\n", gpgme_recip_key->fpr);
   // TODO rm -r cache_dir (see man nftw)
-  return fuse_main(argc, argv, &rgpgfs_fuse_operations, NULL);
+  int fuse_main_err = fuse_main(argc, argv, &rgpgfs_fuse_operations, NULL);
+  gpgme_release(gpgme_ctx);
+  return fuse_main_err;
 }
