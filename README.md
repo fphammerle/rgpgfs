@@ -110,3 +110,7 @@ due to https://github.com/moby/moby/issues/36472 .
 
 1. Adapt paths & recipient in [docker-compose.yml](docker-compose.yml)
 2. `docker-compose up`
+
+### Serve encrypted data via rsync ssh server
+
+See [examples/rsync-sshd](examples/rsync-sshd/docker-compose.yml)

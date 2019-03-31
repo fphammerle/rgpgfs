@@ -2,10 +2,10 @@ version: '2'
 
 volumes:
   plain_data:
+  sshd_host_keys:
 
 services:
   rgpgfs:
-    build: .
     image: fphammerle/rgpgfs
     environment:
       RECIPIENT: 1234567890ABCDEF1234567890ABCDEF12345678
@@ -16,8 +16,14 @@ services:
     devices: [/dev/fuse]
     cap_add: [SYS_ADMIN]
     security_opt: ['apparmor:unconfined']
-    # TODO investigate why some output gets lost when not allocating a tty
     tty: true
-
-# https://docs.docker.com/compose/compose-file/compose-file-v2/
-# https://docs.ansible.com/ansible/latest/modules/docker_service_module.html
+  rsync_sshd:
+    image: fphammerle/rsync-sshd:0.1-amd64
+    environment:
+      USERS: alice
+    volumes:
+    - /mnt/rgpgfs:/data/secrets:slave,ro
+    - sshd_host_keys:/etc/ssh/host_keys
+    - ~/.ssh/authorized_keys:/home/alice/.ssh/authorized_keys:ro
+    ports: ['127.0.0.1:2022:22']
+    # rsync -av --rsh='ssh -p 2022' alice@localhost:/secrets .
