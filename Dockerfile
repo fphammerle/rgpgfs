@@ -17,6 +17,12 @@ WORKDIR /rgpgfs
 RUN make
 
 
+FROM build as test
+
+COPY --chown=build:nogroup tests /rgpgfs/tests
+RUN make tests/str && tests/str
+
+
 FROM alpine:3.9 as runtime
 
 RUN apk add --no-cache \

@@ -2,5 +2,6 @@
 !Makefile
 !docker/
 !src/
+!tests/
 
 # https://docs.docker.com/engine/reference/builder/#dockerignore-file

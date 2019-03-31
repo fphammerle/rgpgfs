@@ -1,4 +1,4 @@
-CC ?= gcc
+CC = gcc
 LD = gcc
 
 CFLAGS := ${CFLAGS} -Wall -Werror -I"$(CURDIR)"
@@ -27,5 +27,11 @@ src/str.o : src/str.c src/str.h
 rgpgfs : src/fs.o src/gpgme.o src/main.o src/str.o
 	$(LD) $^ -o $@ $(LIBS)
 
-format : src/*.h src/*.c
+tests/str.o : tests/str.c src/str.h
+	$(CC) $(CFLAGS) -c $< -o $@
+
+tests/str : tests/str.o src/str.o
+	$(LD) $^ -o $@
+
+format : src/*.h src/*.c tests/*.c
 	clang-format -i -verbose $^
