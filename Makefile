@@ -27,6 +27,12 @@ src/str.o : src/str.c src/str.h
 rgpgfs : src/fs.o src/gpgme.o src/main.o src/str.o
 	$(LD) $^ -o $@ $(LIBS)
 
+tests/fs.o : tests/fs.c src/fs.h
+	$(CC) $(CFLAGS) -c $< -o $@
+
+tests/fs : tests/fs.o src/fs.o
+	$(LD) $^ -o $@
+
 tests/str.o : tests/str.c src/str.h
 	$(CC) $(CFLAGS) -c $< -o $@
 

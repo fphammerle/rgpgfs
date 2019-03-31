@@ -1,7 +1,8 @@
 *
 !Makefile
 !docker/
-!src/
-!tests/
+!src/*.c
+!src/*.h
+!tests/*.c
 
 # https://docs.docker.com/engine/reference/builder/#dockerignore-file

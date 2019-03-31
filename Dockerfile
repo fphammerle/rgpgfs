@@ -20,7 +20,8 @@ RUN make
 FROM build as test
 
 COPY --chown=build:nogroup tests /rgpgfs/tests
-RUN make tests/str && tests/str
+RUN make tests/str && tests/str \
+    && make tests/fs && tests/fs
 
 
 FROM alpine:3.9 as runtime
