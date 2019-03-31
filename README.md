@@ -64,13 +64,24 @@ rgpgfs -o modules=subdir -o subdir=/source/dir /mount/point
 
 ### Docker 🐳
 
-Mount an enciphered view of named volume `plain-data` at `/mnt/gpgfs`.
+Mount an enciphered view of named volume `plain-data` at `/mnt/rgpgfs`:
 
 ```sh
-host$ mkdir /mnt/gpgfs && chmod a+rwx /mnt/gpgfs
+docker run --rm \
+    --device /dev/fuse --cap-add SYS_ADMIN \
+    -e RECIPIENT=1234567890ABCDEF1234567890ABCDEF12345678 \
+    -v plain-data:/plain:ro \
+    -v /mnt/rgpgfs:/encrypted:shared \
+    fphammerle/rgpgfs
+```
+
+Interactively:
+
+```sh
+host$ mkdir /mnt/rgpgfs && chmod a+rwx /mnt/rgpgfs
 host$ docker run --rm -it \
     -v plain-data:/plain:ro \
-    -v /mnt/gpgfs:/enc:shared \
+    -v /mnt/rgpgfs:/enc:shared \
     --device /dev/fuse --cap-add SYS_ADMIN \
     fphammerle/rgpgfs ash
 container$ ls /plain
@@ -84,7 +95,7 @@ container$ rgpgfs -o allow_other,modules=subdir,subdir=/plain,recipient=12345678
 container$ ls /enc
 example.txt.gpg
 # meanwhile in another shell:
-host$ ls /mnt/gpgfs
+host$ ls /mnt/rgpgfs
 example.txt.gpg
 ```
 

@@ -233,6 +233,7 @@ int main(int argc, char *argv[]) {
   }
   printf("recipient fingerprint: %s\n", gpgme_recip_key->fpr);
   if (mkdtemp(cache_dir) == NULL) {
+    perror("Failed to create cache dir");
     return 1;
   }
   printf("cache: %s\n", cache_dir);

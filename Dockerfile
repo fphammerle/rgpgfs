@@ -11,12 +11,13 @@ RUN apk add --no-cache \
 RUN adduser -S build
 USER build
 
-COPY --chown=build:nogroup . /rgpgfs
+COPY --chown=build:nogroup Makefile /rgpgfs/
+COPY --chown=build:nogroup src /rgpgfs/src
 WORKDIR /rgpgfs
 RUN make
 
 
-FROM alpine:3.9
+FROM alpine:3.9 as runtime
 
 RUN apk add --no-cache \
     fuse3 \
@@ -33,3 +34,13 @@ USER encrypt
 COPY --from=build /rgpgfs/rgpgfs /usr/local/bin/
 
 COPY --chown=encrypt:nogroup docker/ash_history /home/encrypt/.ash_history
+
+
+FROM runtime as unattended
+
+ENV RECIPIENT= \
+    SOURCE_DIR=/plain \
+    CIPHER_DIR=/encrypted
+
+COPY docker/rgpgfs_unattended.sh /
+CMD ["/rgpgfs_unattended.sh"]
