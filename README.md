@@ -105,3 +105,8 @@ you may need to add `--security-opt apparmor:unconfined`.
 You may need to disable user namespace remapping for containers
 (dockerd option `--userns-remap`)
 due to https://github.com/moby/moby/issues/36472 .
+
+### Docker Compose 🐙
+
+1. Adapt paths & recipient in [docker-compose.yml](docker-compose.yml)
+2. `docker-compose up`

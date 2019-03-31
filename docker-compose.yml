@@ -1,0 +1,23 @@
+version: '2'
+
+volumes:
+  plain_data:
+
+services:
+  rgpgfs:
+    build: .
+    image: fphammerle/rgpgfs
+    environment:
+      RECIPIENT: 1234567890ABCDEF1234567890ABCDEF12345678
+    volumes:
+    - plain_data:/plain:ro
+    # TODO replace host path with named volume
+    - /mnt/rgpgfs:/encrypted:shared
+    devices: [/dev/fuse]
+    cap_add: [SYS_ADMIN]
+    security_opt: ['apparmor:unconfined']
+    # TODO investigate why some output gets lost without allocating a tty
+    tty: true
+
+# https://docs.docker.com/compose/compose-file/compose-file-v2/
+# https://docs.ansible.com/ansible/latest/modules/docker_service_module.html
