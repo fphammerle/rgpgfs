@@ -38,7 +38,9 @@ set -x
 grep -q "^trust-model always$" ~/.gnupg/gpg.conf 2> /dev/null \
     || echo trust-model always | tee ~/.gnupg/gpg.conf
 
+trap 'fusermount3 -u "$CIPHER_DIR"' SIGTERM
 rgpgfs -f -o allow_other \
     -o modules=subdir,subdir="$SOURCE_DIR" \
     -o recipient="$RECIPIENT" \
-    "$CIPHER_DIR"
+    "$CIPHER_DIR" &
+wait $!
